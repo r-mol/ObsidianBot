@@ -20,8 +20,4 @@ resource "github_branch_protection" "default" {
   pattern                         = github_branch_default.main.branch
   require_conversation_resolution = true
   enforce_admins                  = true
-
-  required_pull_request_reviews {
-    required_approving_review_count = 1
-  }
 }
