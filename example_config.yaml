@@ -1,0 +1,8 @@
+server:
+  host: ""
+  port: "8081"
+  user_id: 471895149
+  obsidian_absolute_path: "/obsidian"
+tg_bot:
+  webhook_url: "https://romanmolochkov.ru/bot"
+  token: "xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
