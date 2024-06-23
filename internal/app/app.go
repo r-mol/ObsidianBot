@@ -59,10 +59,20 @@ func Run(ctx context.Context, configPath string) error {
 			DescEn:  "Remove item from shopping list",
 			Handler: obsidianUsecase.RemoveItemsFromShoppingList,
 		},
-		"wishing_list": {
+		"wish_list": {
 			DescRu:  "Показать весь список желаний",
-			DescEn:  "Get wishing list",
+			DescEn:  "Get wish list",
 			Handler: obsidianUsecase.GetWishList,
+		},
+		"reading_list": {
+			DescRu:  "Показать список книг",
+			DescEn:  "Get reading list",
+			Handler: obsidianUsecase.GetReadingList,
+		},
+		"watching_list": {
+			DescRu:  "Показать список фильмов",
+			DescEn:  "Get watching list",
+			Handler: obsidianUsecase.GetWatchingList,
 		},
 	}
 
@@ -146,7 +156,7 @@ func GetApp() *cobra.Command {
 			}
 		},
 	}
-	
+
 	cmd.Flags().StringVar(&configPath, "config", "configs/config.yaml", "path to config file")
 	_ = cmd.MarkFlagRequired("config")
 

@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -24,6 +25,8 @@ const (
 	FilenameShoppingList = "Shopping List.md"
 	FilenameWishList     = "Wish List.md"
 	DirTimestamps        = "Timestamps"
+	DirBooks             = "Books"
+	DirFilms             = "Films"
 )
 
 type Repository interface {
@@ -32,6 +35,7 @@ type Repository interface {
 	ReadFromFile(fp string) (string, error)
 	AppendToFile(fp string, data string) error
 	WriteToFile(fp string, data string) error
+	WalkInPath(fp string, walkFunc filepath.WalkFunc) error
 }
 
 type obsidian struct {
@@ -152,13 +156,95 @@ func (us *obsidian) GetWishList(ctx context.Context, msg string) (string, error)
 	return data, nil
 }
 
-//func GetReadingList(ctx context.Context, msg string) (string, error) {
-//
-//}
-//
-//func GetWatchingList(ctx context.Context, msg string) (string, error) {
-//
-//}
+func (us *obsidian) GetReadingList(ctx context.Context, msg string) (string, error) {
+	return us.generateReport(DirBooks)
+}
+
+func (us *obsidian) GetWatchingList(ctx context.Context, msg string) (string, error) {
+	return us.generateReport(DirFilms)
+}
+
+func (us *obsidian) generateReport(path string) (string, error) {
+	var notStarted, inProgress, finished []string
+
+	findFunc := func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() && strings.HasSuffix(info.Name(), ".md") {
+			file, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			var findProperties bool
+			var name, progress string
+			scanner := bufio.NewScanner(file)
+			for scanner.Scan() {
+				line := strings.TrimSpace(scanner.Text())
+
+				if line == "---" {
+					if findProperties {
+						break
+					} else {
+						findProperties = true
+						continue
+					}
+				}
+
+				if strings.HasPrefix(line, "name:") {
+					name = strings.TrimSpace(strings.TrimPrefix(line, "name:"))
+				}
+
+				if strings.HasPrefix(line, "progress:") {
+					progress = strings.TrimSpace(strings.TrimPrefix(line, "progress:"))
+				}
+			}
+
+			if err := scanner.Err(); err != nil {
+				return err
+			}
+
+			switch progress {
+			case "not_started":
+				notStarted = append(notStarted, name)
+			case "in_progress":
+				inProgress = append(inProgress, name)
+			case "finished":
+				finished = append(finished, name)
+			}
+		}
+
+		return nil
+	}
+
+	var report strings.Builder
+
+	err := us.Repo.WalkInPath(path, findFunc)
+	if err != nil {
+		return "", fmt.Errorf("walking the path: %w", err)
+	}
+
+	report.WriteString("**Not Started**\n-------------\n\n")
+	for _, book := range notStarted {
+		report.WriteString(fmt.Sprintf("- %s\n", book))
+	}
+
+	report.WriteString("\n**In Progress**\n-------------\n\n")
+	for _, book := range inProgress {
+		report.WriteString(fmt.Sprintf("- %s\n", book))
+	}
+
+	report.WriteString("\n**Finished**\n-------------\n\n")
+	for _, book := range finished {
+		report.WriteString(fmt.Sprintf("- %s\n", book))
+	}
+
+	return report.String(), nil
+}
+
 // ---------------------------------------- Shopping ----------------------------------------
 
 func (us *obsidian) GetShoppingList(ctx context.Context, msg string) (string, error) {

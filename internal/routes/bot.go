@@ -55,8 +55,6 @@ func (br *bot) TextMessageHandler(ctx context.Context, b *tb.Bot) {
 				userFriendlyMessage = fmt.Errorf("**Error occurred in proccessing message.**\n\n%w", err).Error()
 			}
 		} else {
-			fmt.Println(user.ID)
-			fmt.Println(br)
 			userFriendlyMessage = fmt.Sprintf("**You are not allowed to use this bot.**")
 		}
 
@@ -111,7 +109,7 @@ func (br *bot) SetMenu(ctx context.Context, bot *tb.Bot, menu map[string]Command
 				userFriendlyMessage = fmt.Sprintf("**You are not allowed to use this bot.**")
 			}
 
-			_, err = bot.Send(c.Sender(), userFriendlyMessage)
+			_, err = bot.Send(c.Sender(), userFriendlyMessage, tb.ModeMarkdown)
 			if err != nil {
 				return fmt.Errorf("send message: %w", err)
 			}

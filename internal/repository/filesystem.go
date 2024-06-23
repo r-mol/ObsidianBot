@@ -57,6 +57,17 @@ func (fs *fileSystem) ReadFromFile(fp string) (string, error) {
 	return string(data), nil
 }
 
+func (fs *fileSystem) WalkInPath(fp string, walkFunc filepath.WalkFunc) error {
+	fp = fs.joinWithAbsolutePath(fp)
+
+	err := filepath.Walk(fp, walkFunc)
+	if err != nil {
+		return fmt.Errorf("walking in path [epath = %q]: %w", fp, err)
+	}
+
+	return nil
+}
+
 func (fs *fileSystem) AppendToFile(fp string, data string) error {
 	fp = fs.joinWithAbsolutePath(fp)
 
