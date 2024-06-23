@@ -9,6 +9,7 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	_ "time/tzdata"
 )
 
 type Tag string
@@ -125,7 +126,7 @@ func (us *obsidian) AddAction(ctx context.Context, msg string) (string, error) {
 
 	currentTime := time.Now().In(moscowLocation)
 
-	content := fmt.Sprintf("%s - %s", currentTime.Format("15:04"), msg)
+	content := fmt.Sprintf("\n%s - %s", currentTime.Format("15:04"), msg)
 
 	filename := fmt.Sprintf("%s.md", currentTime.Format("2006-01-02"))
 	fp := filepath.Join(DirTimestamps, filename)
