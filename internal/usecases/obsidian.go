@@ -11,6 +11,8 @@ import (
 	"text/template"
 	"time"
 	_ "time/tzdata"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Tag string
@@ -35,7 +37,8 @@ type Repository interface {
 	ReadFromFile(fp string) (string, error)
 	AppendToFile(fp string, data string) error
 	WriteToFile(fp string, data string) error
-	WalkInPath(fp string, walkFunc filepath.WalkFunc) error
+	ReadDir(path string) ([]os.DirEntry, error)
+	OpenFile(fp string) (*os.File, error)
 }
 
 type obsidian struct {
@@ -167,15 +170,21 @@ func (us *obsidian) GetWatchingList(ctx context.Context, msg string) (string, er
 func (us *obsidian) generateReport(path string) (string, error) {
 	var notStarted, inProgress, finished []string
 
-	findFunc := func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	entries, err := us.Repo.ReadDir(path)
+	if err != nil {
+		return "", fmt.Errorf("read dir: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
 		}
 
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".md") {
-			file, err := os.Open(path)
+		if strings.HasSuffix(entry.Name(), ".md") {
+			fp := filepath.Join(path, entry.Name())
+			file, err := us.Repo.OpenFile(fp)
 			if err != nil {
-				return err
+				return "", fmt.Errorf("open file: %w", err)
 			}
 			defer file.Close()
 
@@ -204,7 +213,7 @@ func (us *obsidian) generateReport(path string) (string, error) {
 			}
 
 			if err := scanner.Err(); err != nil {
-				return err
+				return "", fmt.Errorf("scan: %w", err)
 			}
 
 			switch progress {
@@ -215,31 +224,66 @@ func (us *obsidian) generateReport(path string) (string, error) {
 			case "finished":
 				finished = append(finished, name)
 			}
-		}
 
-		return nil
+			file.Close()
+		}
 	}
 
 	var report strings.Builder
 
-	err := us.Repo.WalkInPath(path, findFunc)
-	if err != nil {
-		return "", fmt.Errorf("walking the path: %w", err)
-	}
-
 	report.WriteString("**Not Started**\n-------------\n\n")
-	for _, book := range notStarted {
-		report.WriteString(fmt.Sprintf("- %s\n", book))
+	for _, item := range notStarted {
+		report.WriteString(fmt.Sprintf("- %s\n", item))
 	}
 
 	report.WriteString("\n**In Progress**\n-------------\n\n")
-	for _, book := range inProgress {
-		report.WriteString(fmt.Sprintf("- %s\n", book))
+	for _, item := range inProgress {
+		report.WriteString(fmt.Sprintf("- %s\n", item))
 	}
 
 	report.WriteString("\n**Finished**\n-------------\n\n")
-	for _, book := range finished {
-		report.WriteString(fmt.Sprintf("- %s\n", book))
+	for _, item := range finished {
+		report.WriteString(fmt.Sprintf("- %s\n", item))
+	}
+
+	log.Warn(report.String())
+	return report.String(), nil
+}
+
+func (us *obsidian) GetInboxItems(ctx context.Context, msg string) (string, error) {
+	var items []string
+
+	entries, err := us.Repo.ReadDir("")
+	if err != nil {
+		return "", fmt.Errorf("read dir: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		if strings.HasSuffix(entry.Name(), ".md") {
+			data, err := us.Repo.ReadFromFile(entry.Name())
+			if err != nil {
+				return "", fmt.Errorf("read file: %w", err)
+			}
+
+			tag := fmt.Sprintf("#%s", TagInbox)
+			if strings.Contains(data, tag) {
+				if entry.Name() != "README.md" && entry.Name() != "Inbox Notes.md" {
+					item := strings.TrimSuffix(entry.Name(), ".md")
+					items = append(items, item)
+				}
+			}
+		}
+	}
+
+	var report strings.Builder
+
+	report.WriteString("\n**Inbox**\n-------------\n\n")
+	for _, item := range items {
+		report.WriteString(fmt.Sprintf("- %s\n", item))
 	}
 
 	return report.String(), nil

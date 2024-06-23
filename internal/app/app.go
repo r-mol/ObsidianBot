@@ -74,6 +74,11 @@ func Run(ctx context.Context, configPath string) error {
 			DescEn:  "Get watching list",
 			Handler: obsidianUsecase.GetWatchingList,
 		},
+		"inbox": {
+			DescRu:  "Показать inbox",
+			DescEn:  "Get inbox",
+			Handler: obsidianUsecase.GetInboxItems,
+		},
 	}
 
 	err = botRoute.SetMenu(ctx, b, tgMenu)

@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
+
 	log "github.com/sirupsen/logrus"
 	tb "gopkg.in/telebot.v3"
 )
@@ -77,8 +80,11 @@ func (br *bot) SetMenu(ctx context.Context, bot *tb.Bot, menu map[string]Command
 	cmdsRu := make([]tb.Command, 0, len(menu))
 	cmdsEn := make([]tb.Command, 0, len(menu))
 
-	for cmd, info := range menu {
-		cmd, info := cmd, info
+	keys := maps.Keys(menu)
+	slices.Sort(keys)
+
+	for _, key := range keys {
+		cmd, info := key, menu[key]
 
 		cmdsRu = append(cmdsRu, tb.Command{Text: cmd, Description: info.DescRu})
 		cmdsEn = append(cmdsEn, tb.Command{Text: cmd, Description: info.DescEn})

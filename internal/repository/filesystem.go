@@ -20,6 +20,17 @@ func (fs *fileSystem) joinWithAbsolutePath(path string) string {
 	return filepath.Join(fs.AbsolutePath, path)
 }
 
+func (fs *fileSystem) OpenFile(fp string) (*os.File, error) {
+	fp = fs.joinWithAbsolutePath(fp)
+
+	file, err := os.Open(fp)
+	if err != nil {
+		return nil, fmt.Errorf("open file [filepath = %q]: %w", fp, err)
+	}
+
+	return file, nil
+}
+
 func (fs *fileSystem) CreateFile(fp string) (*os.File, error) {
 	fp = fs.joinWithAbsolutePath(fp)
 
@@ -57,15 +68,15 @@ func (fs *fileSystem) ReadFromFile(fp string) (string, error) {
 	return string(data), nil
 }
 
-func (fs *fileSystem) WalkInPath(fp string, walkFunc filepath.WalkFunc) error {
-	fp = fs.joinWithAbsolutePath(fp)
+func (fs *fileSystem) ReadDir(path string) ([]os.DirEntry, error) {
+	path = fs.joinWithAbsolutePath(path)
 
-	err := filepath.Walk(fp, walkFunc)
+	entities, err := os.ReadDir(path)
 	if err != nil {
-		return fmt.Errorf("walking in path [epath = %q]: %w", fp, err)
+		return nil, fmt.Errorf("read dir [path = %q]: %w", path, err)
 	}
 
-	return nil
+	return entities, nil
 }
 
 func (fs *fileSystem) AppendToFile(fp string, data string) error {
